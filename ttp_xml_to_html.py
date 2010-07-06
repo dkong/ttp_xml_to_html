@@ -285,7 +285,7 @@ def WriteFullHTML(filename, defects):
                 value = defect.data[column]
                 if value and column == 'id':
                     f.write('<td><a href=%s>%s</a></td>\n' % (value + '.html', value))
-                if value and column == 'assigned':
+                elif value and column == 'assigned':
                     f.write('<td>%s</td>' % (" and ".join(value)))
                 elif value:
                     value = defect.data[column].encode('ascii', 'ignore')
