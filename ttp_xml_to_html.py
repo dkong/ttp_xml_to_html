@@ -27,6 +27,10 @@ rootDir = sys.argv[1]
 xmlFile = os.path.join(rootDir, 'archive_manifest.xml')
 htmlFull = os.path.join(rootDir, 'index.html')
 
+if not os.path.exists(xmlFile):
+    print 'Error "%s" does not exist.  Did you type the correct directory?' % xmlFile
+    sys.exit(-1)
+
 defectsList = []
 
 # Note: The TTP XML exporter has some incorrect fields, for example the component
@@ -69,6 +73,7 @@ def RenameAttachmentsToOriginal():
             continue
 
         os.rename(dat, original)
+        rename_count = rename_count + 1
 
     if rename_count > 0:
         print 'Successfully renamed %d files' % (rename_count)
@@ -93,8 +98,8 @@ class Defect:
         f.write('<body>\n')
 
         f.write('<table border="1">\n')
-        f.write('<tr> <td>%s</td> <td>%s</td> <td>Assigned: %s</td> <td>Component: %s</td> </tr>\n' % (self.Get('id'), self.Get('status'), self.Get('assigned'), self.Get('component')))
-        f.write('<tr> <td>Sev: %s</td> <td>Rate: %s</td> <td>Reporter: %s</td> <td>Opened: %s</td> <td>%s</td> </tr>\n' % (self.Get('severity'), self.Get('rate'), self.Get('reporter'), self.Get('date'), self.Get('found_version')))
+        f.write('<tr> <td>%s</td> <td>%s</td> <td>Assigned: %s</td> <td>Component: %s</td> </tr>\n' % (self.Get('id'), self.Get('status'), " and ".join(self.data['assigned']), self.Get('component')))
+        f.write('<tr> <td>Sev: %s</td> <td>Rate: %s</td> <td>Reporter: %s</td> <td>Opened: %s</td> <td>%s</td> </tr>\n' % (self.Get('severity'), self.Get('rate'), self.data['reporter'][0], self.Get('date'), self.Get('found_version')))
         f.write('</table>\n')
 
         f.write('<h2>%s</h2>\n' % (self.Get('summary')))
@@ -105,9 +110,9 @@ class Defect:
         if len(defectEvents) > 0:
             f.write('<table border="1">\n')
             for event in defectEvents:
-                f.write('<tr> <td>%s</td> <td>%s</td> <td>%s</td>' % (event['date'], event['author'], event['name']))
+                f.write('<tr> <td>%s</td> <td>%s</td> <td>%s</td>' % (event['date'], event['author'][0], event['name']))
                 if event.has_key('assigned'):
-                    f.write('<td>Assigned To: %s</td>' % (event['assigned']))
+                    f.write('<td>Assigned To: %s</td>' % (" and ".join(event['assigned'])))
                 if event.has_key('notes') and event['notes']:
                     f.write('<td>%s</td>' % (event['notes']))
                 if event.has_key('fixed_version') and event['fixed_version']:
@@ -146,13 +151,14 @@ def GetXmlValue(element, element_name):
     return None
 
 def GetNameValue(element, element_name):
-    elements = element.getElementsByTagName(element_name)
-    if len(elements) == 1:
-        first_name = GetXmlValue(elements[0], 'first-name')
-        last_name = GetXmlValue(elements[0], 'last-name')
-        return "%s, %s" % (last_name, first_name)
-
-    return None
+    namesList = []
+    names = element.getElementsByTagName(element_name)
+    for name in names:
+        first_name = GetXmlValue(name, 'first-name')
+        last_name = GetXmlValue(name, 'last-name')
+        namesList.append("%s, %s" % (last_name, first_name))
+        
+    return namesList
 
 def GetAttachmentsValue(element):
     attachmentsList = []
@@ -221,6 +227,26 @@ def ParseDefects():
         defect.data['description'] = GetDescriptionValue(defectElement)
         defect.data['found_version'] = GetCustomFieldValue(defectElement, 'found on build')
         defect.data['defect_events'] = GetDefectEventsValue(defectElement)
+        
+def GetSeverityCount(defects):
+	a = b = c = other = 0
+	for defect in defects:
+		if defect.data.has_key('severity'):
+			severity = defect.data['severity']
+			if severity:
+				severity = severity.lower()
+				if severity == 'a':
+					a = a + 1
+				elif severity == 'b':
+					b = b + 1
+				elif severity == 'c':
+					c = c + 1
+				else:
+					other = other + 1
+			else:
+				other = other + 1
+	return (a, b, c, other)
+			
 
 def WriteFullHTML(filename, defects):
     """ Write out a single HTML file containing a table of defects"""
@@ -242,7 +268,8 @@ def WriteFullHTML(filename, defects):
     </style>
     """)
 
-    f.write('<title>TTP Database - %d Defects</title>\n' % len(defects))
+    a, b, c, other = GetSeverityCount(defectsList)
+    f.write('<title>TTP Database - %d Defects - A: %d + B: %d + C: %d + Other: %d</title>\n' % (len(defects), a, b, c, other))
     f.write('</head>\n')
     f.write('<body><table class="sortable" border="1">\n')
 
@@ -258,6 +285,8 @@ def WriteFullHTML(filename, defects):
                 value = defect.data[column]
                 if value and column == 'id':
                     f.write('<td><a href=%s>%s</a></td>\n' % (value + '.html', value))
+                if value and column == 'assigned':
+                    f.write('<td>%s</td>' % (" and ".join(value)))
                 elif value:
                     value = defect.data[column].encode('ascii', 'ignore')
                     f.write('<td>%s</td>' % (value))
