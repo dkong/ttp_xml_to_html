@@ -18,6 +18,8 @@
 import os
 import sys
 from xml.dom.minidom import parse, parseString
+import datetime
+import re
 
 if len(sys.argv) != 2:
     print 'Usage: python %s <path_to_unzipped_xml_export>' % (sys.argv[0])
@@ -32,6 +34,13 @@ if not os.path.exists(xmlFile):
     sys.exit(-1)
 
 defectsList = []
+
+defectDateRE = re.compile('(\d+)/(\d+)/(\d+) (\d+):(\d+):(\d+) (PM|AM)')
+
+# Use date of archive_manifest.xml as "current" time
+fileTime =os.path.getmtime(xmlFile)
+currentDatetime = datetime.datetime.fromtimestamp(fileTime)
+cutOffDateTime = currentDatetime - datetime.timedelta(days=1)
 
 # Note: The TTP XML exporter has some incorrect fields, for example the component
 # value is contained in the priority elment.  Not sure if the exporter is wrong or 
@@ -141,6 +150,27 @@ class Defect:
         f.write('</body>\n')
         f.write('</html>\n')
         f.close()
+
+    def RecentlyUpdated(self):
+        """ Returns True if this bug has any defect events within the last 24 hours """
+        defectEvents = self.data['defect_events']
+        if len(defectEvents) > 0:
+            for event in defectEvents:
+                match = defectDateRE.search(event['date'])
+                if match:
+                    values = match.groups()
+                    if len(values) == 7:
+                        hours = int(values[3])
+                        if values[6] == 'PM':
+                            hours += 12
+                            if hours >= 24:
+                                hours = 0
+
+                        defectDate = datetime.datetime(int(values[2]), int(values[0]), int(values[1]), hours, int(values[4]), int(values[5]))
+                        if defectDate > cutOffDateTime:
+                            return True
+                
+        return False        
 
 def GetXmlValue(element, element_name):
     elements = element.getElementsByTagName(element_name)
@@ -274,12 +304,14 @@ def WriteFullHTML(filename, defects):
     f.write('<body><table class="sortable" border="1">\n')
 
     f.write('<tr>')
+    f.write('<th>new</th>')
     for column in allColumnOrder:
         f.write('<th>%s</th>' % (column))
     f.write('</tr>\n')
 
     for defect in defects:
         f.write('<tr>')
+        f.write('<td>%s</td>' % ('*' if defect.RecentlyUpdated() else ''))
         for column in allColumnOrder:
             if defect.data.has_key(column):
                 value = defect.data[column]
