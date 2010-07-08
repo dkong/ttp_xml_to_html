@@ -53,8 +53,6 @@ xml_element_to_friendly_name = { 'record-id':'id',
         'date-entered':'date',
         'defect-status':'status' }
 
-# TODO: There's a bug where you can't sort the last column.  I confirmed the bug is not
-# positional nor is it related to the column data.
 allColumnOrder = ['id', 'summary', 'severity', 'status', 'assigned', 'component' ]
 
 
@@ -187,6 +185,9 @@ def GetNameValue(element, element_name):
         first_name = GetXmlValue(name, 'first-name')
         last_name = GetXmlValue(name, 'last-name')
         namesList.append("%s, %s" % (last_name, first_name))
+
+    if len(namesList) == 0:
+        namesList.append("")
         
     return namesList
 
@@ -250,6 +251,8 @@ def ParseDefects():
             value = GetXmlValue(defectElement, xml_name)
             if value:
                 defect.data[friendly_name] = value
+            else:
+                defect.data[friendly_name] = ""
 
         defect.data['assigned'] = GetNameValue(defectElement, 'currently-assigned-to')
         defect.data['reporter'] = GetNameValue(defectElement, 'entered-by')
@@ -257,7 +260,7 @@ def ParseDefects():
         defect.data['description'] = GetDescriptionValue(defectElement)
         defect.data['found_version'] = GetCustomFieldValue(defectElement, 'found on build')
         defect.data['defect_events'] = GetDefectEventsValue(defectElement)
-        
+
 def GetSeverityCount(defects):
 	a = b = c = other = 0
 	for defect in defects:
@@ -322,6 +325,8 @@ def WriteFullHTML(filename, defects):
                 elif value:
                     value = defect.data[column].encode('ascii', 'ignore')
                     f.write('<td>%s</td>' % (value))
+                else:
+                    f.write('<td></td>')
         f.write('</tr>\n')
 
     f.write('</table></body>\n')
