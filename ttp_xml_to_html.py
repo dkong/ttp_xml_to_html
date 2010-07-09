@@ -121,7 +121,7 @@ class Defect:
                 if event.has_key('assigned'):
                     f.write('<td>Assigned To: %s</td>' % (" and ".join(event['assigned'])))
                 if event.has_key('notes') and event['notes']:
-                    f.write('<td>%s</td>' % (event['notes']))
+                    f.write('<td>%s</td>' % (event['notes'].encode('ascii', 'ignore')))
                 if event.has_key('fixed_version') and event['fixed_version']:
                     f.write('<td>Fixed Version: %s</td>' % (event['fixed_version']))
                 f.write('</tr>')
@@ -142,8 +142,8 @@ class Defect:
                 filename = value['filename']
                 date = value['date']
                 if filename.lower().find('.jpg') != -1:
-                    f.write('<br><a href="%s">%s - %s</a>\n' % (filename, filename, date))
-                    f.write('<br><img src="%s" alt="%s" /><br>\n' % (filename, filename))
+                    f.write('<br><a href="%s">%s - %s</a>\n' % (filename.replace('#', '%23'), filename, date))
+                    f.write('<br><img src="%s" alt="%s" /><br>\n' % (filename.replace('#', '%23'), filename))
 
         f.write('</body>\n')
         f.write('</html>\n')
