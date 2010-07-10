@@ -55,6 +55,9 @@ xml_element_to_friendly_name = { 'record-id':'id',
 
 allColumnOrder = ['id', 'summary', 'severity', 'status', 'assigned', 'component' ]
 
+def ConvertToEscaped(s):
+    s_escaped = s.replace('#', '%23')
+    return s_escaped
 
 def RenameAttachmentsToOriginal():
     datToOriginal = {}
@@ -133,7 +136,7 @@ class Defect:
                 filename = value['filename']
                 date = value['date']
                 if filename.lower().find('.jpg') == -1:
-                    f.write('<br><a href="%s">%s - %s</a>\n' % (filename, filename, date))
+                    f.write('<br><a href="%s">%s - %s</a>\n' % (ConvertToEscaped(filename), filename, date))
 
         # Display image attachments
         f.write('<br>')
@@ -142,8 +145,8 @@ class Defect:
                 filename = value['filename']
                 date = value['date']
                 if filename.lower().find('.jpg') != -1:
-                    f.write('<br><a href="%s">%s - %s</a>\n' % (filename.replace('#', '%23'), filename, date))
-                    f.write('<br><img src="%s" alt="%s" /><br>\n' % (filename.replace('#', '%23'), filename))
+                    f.write('<br><a href="%s">%s - %s</a>\n' % (ConvertToEscaped(filename), filename, date))
+                    f.write('<br><img src="%s" alt="%s" /><br>\n' % (ConvertToEscaped(filename), filename))
 
         f.write('</body>\n')
         f.write('</html>\n')
@@ -314,7 +317,11 @@ def WriteFullHTML(filename, defects):
 
     for defect in defects:
         f.write('<tr>')
-        f.write('<td>%s</td>' % ('*' if defect.RecentlyUpdated() else ''))
+        if (defect.RecentlyUpdated()):
+            newMarker = '*'
+        else:
+            newMarker = ''
+        f.write('<td>%s</td>' % (newMarker))
         for column in allColumnOrder:
             if defect.data.has_key(column):
                 value = defect.data[column]
