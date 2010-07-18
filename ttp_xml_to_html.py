@@ -109,18 +109,22 @@ class Defect:
 
         f.write('<table border="1">\n')
         f.write('<tr> <td>%s</td> <td>%s</td> <td>Assigned: %s</td> <td>Component: %s</td> </tr>\n' % (self.Get('id'), self.Get('status'), " and ".join(self.data['assigned']), self.Get('component')))
-        f.write('<tr> <td>Sev: %s</td> <td>Rate: %s</td> <td>Reporter: %s</td> <td>Opened: %s</td> <td>%s</td> </tr>\n' % (self.Get('severity'), self.Get('rate'), self.data['reporter'][0], self.Get('date'), self.Get('found_version')))
+        f.write(('<tr> <td>Sev: %s</td> <td>Rate: %s</td> <td>Reporter: %s</td> <td>Opened: %s</td> <td>%s</td> </tr>\n' % (self.Get('severity'), self.Get('rate'), self.data['reporter'][0], self.Get('date'), self.Get('found_version'))).encode('ascii', 'ignore'))
         f.write('</table>\n')
 
         f.write('<h2>%s</h2>\n' % (self.Get('summary')))
         f.write('<pre>%s</pre>\n' % (self.Get('description')))
+
+        if self.Get('repro_steps'):
+            f.write('<h3>Steps to reproduce:</h3>')
+            f.write('<pre>%s</pre>\n' % (self.Get('repro_steps')))
 
         # Defect events
         defectEvents = self.data['defect_events']
         if len(defectEvents) > 0:
             f.write('<table border="1">\n')
             for event in defectEvents:
-                f.write('<tr> <td>%s</td> <td>%s</td> <td>%s</td>' % (event['date'], event['author'][0], event['name']))
+                f.write(('<tr> <td>%s</td> <td>%s</td> <td>%s</td>' % (event['date'], event['author'][0], event['name'])).encode('ascii', 'ignore'))
                 if event.has_key('assigned'):
                     f.write('<td>Assigned To: %s</td>' % (" and ".join(event['assigned'])))
                 if event.has_key('notes') and event['notes']:
@@ -225,12 +229,12 @@ def GetDefectEventsValue(element):
 
     return defectEventsList
 
-def GetDescriptionValue(element):
+def GetReportedByRecordValue(element, element_name):
     elements = element.getElementsByTagName('reported-by-record') 
     if len(elements) == 1:
-        return GetXmlValue(elements[0], 'description')
+        return GetXmlValue(elements[0], element_name)
 
-    return attachmentsList
+    return None
 
 def GetCustomFieldValue(element, element_name):
     elements = element.getElementsByTagName('custom-field-value')
@@ -260,7 +264,8 @@ def ParseDefects():
         defect.data['assigned'] = GetNameValue(defectElement, 'currently-assigned-to')
         defect.data['reporter'] = GetNameValue(defectElement, 'entered-by')
         defect.data['attachments'] = GetAttachmentsValue(defectElement)
-        defect.data['description'] = GetDescriptionValue(defectElement)
+        defect.data['description'] = GetReportedByRecordValue(defectElement, 'description')
+        defect.data['repro_steps'] = GetReportedByRecordValue(defectElement, 'steps-to-reproduce')
         defect.data['found_version'] = GetCustomFieldValue(defectElement, 'found on build')
         defect.data['defect_events'] = GetDefectEventsValue(defectElement)
 
