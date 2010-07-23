@@ -59,6 +59,9 @@ def ConvertToEscaped(s):
     s_escaped = s.replace('#', '%23')
     return s_escaped
 
+def IsImage(filename):
+    return filename.lower().find('.jpg') != -1 or filename.lower().find('.png') != -1
+
 def RenameAttachmentsToOriginal():
     datToOriginal = {}
     dom1 = parse(xmlFile)
@@ -139,7 +142,7 @@ class Defect:
             for value in self.data['attachments']:
                 filename = value['filename']
                 date = value['date']
-                if filename.lower().find('.jpg') == -1:
+                if not IsImage(filename):
                     f.write('<br><a href="%s">%s - %s</a>\n' % (ConvertToEscaped(filename), filename, date))
 
         # Display image attachments
@@ -148,7 +151,7 @@ class Defect:
             for value in self.data['attachments']:
                 filename = value['filename']
                 date = value['date']
-                if filename.lower().find('.jpg') != -1:
+                if IsImage(filename):
                     f.write('<br><a href="%s">%s - %s</a>\n' % (ConvertToEscaped(filename), filename, date))
                     f.write('<br><img src="%s" alt="%s" /><br>\n' % (ConvertToEscaped(filename), filename))
 
